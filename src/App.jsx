@@ -69,20 +69,22 @@ function App() {
 
   const theme = getBrandColor();
 
-  // Lógica de IA - CONECTADA AL BACKEND REAL
+  // Lógica de IA - CONFIGURADA PARA PRODUCCIÓN Y LOCAL
   const handleAnalizarLink = async () => {
     if (!inputLink) return;
     setIsLoading(true);
 
+    // Lee la URL de Railway en producción o usa localhost si estás programando en tu PC
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
     try {
-      // Llamada a tu servidor local
-      const response = await fetch('http://localhost:3001/api/scan', {
+      const response = await fetch(`${API_URL}/api/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: inputLink })
       });
 
-      if (!response.ok) throw new Error("Error en el servidor");
+      if (!response.ok) throw new Error("Error en el servidor al escanear");
 
       const data = await response.json(); 
 
@@ -106,8 +108,8 @@ function App() {
       alert(`¡${data.type.toUpperCase()} detectada con éxito!`);
 
     } catch (error) {
-      console.error("Error en el servidor:", error);
-      alert("Error: Asegúrate de que el backend (node index.js) esté encendido en el puerto 3001.");
+      console.error("Error en el escáner:", error);
+      alert("Hubo un problema al conectar con el escáner. Por favor, inténtalo de nuevo en unos momentos.");
     } finally {
       setIsLoading(false);
     }
