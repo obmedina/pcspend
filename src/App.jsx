@@ -75,7 +75,7 @@ function App() {
     setIsLoading(true);
 
     // Lee la URL de Railway en producción o usa localhost si estás programando en tu PC
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const API_URL = import.meta.env.VITE_API_URL || 'https://pc-spend-backend-production.up.railway.app';
 
     try {
       const response = await fetch(`${API_URL}/api/scan`, {
