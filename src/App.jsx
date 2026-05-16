@@ -74,7 +74,6 @@ function App() {
     if (!inputLink) return;
     setIsLoading(true);
 
-    // Lee la URL de Railway en producción o usa localhost si estás programando en tu PC
     const API_URL = import.meta.env.VITE_API_URL || 'https://pc-spend-backend-production.up.railway.app';
 
     try {
@@ -88,28 +87,36 @@ function App() {
 
       const data = await response.json(); 
 
-      // Si es una GPU, creamos un objeto nuevo con los vatios de la IA
-      if (data.type === 'gpu') {
+      // CORRECCIÓN: Aseguramos que data y data.type existan antes de llamar métodos de string
+      const componenteTipo = data && data.type ? data.type.toLowerCase() : null;
+
+      if (componenteTipo === 'gpu') {
         setGpuSeleccionada({
           id: 'gpu-ia',
-          name: data.name,
-          consumo: data.tdp,
-          brand: data.name.toLowerCase().includes('amd') ? 'amd' : 'nvidia'
+          name: data.name || 'GPU Detectada',
+          consumo: Number(data.tdp) || 200,
+          brand: data.name && data.name.toLowerCase().includes('amd') ? 'amd' : 'nvidia'
         });
-      } else if (data.type === 'cpu') {
+      } else if (componenteTipo === 'cpu') {
         setCpuSeleccionada({
           id: 'cpu-ia',
-          name: data.name,
-          consumo: data.tdp
+          name: data.name || 'CPU Detectada',
+          consumo: Number(data.tdp) || 65
         });
+      } else {
+        // Fallback por si la IA devuelve un tipo irreconocible o nulo
+        throw new Error("No se pudo clasificar el componente como CPU o GPU de forma clara.");
       }
 
       setInputLink(""); // Limpiar input
-      alert(`¡${data.type.toUpperCase()} detectada con éxito!`);
+      
+      // CORRECCIÓN: toUpperCase() blindado contra valores nulos o indefinidos
+      const tipoAlerta = componenteTipo ? componenteTipo.toUpperCase() : 'COMPONENTE';
+      alert(`¡${tipoAlerta} detectada con éxito!`);
 
     } catch (error) {
       console.error("Error en el escáner:", error);
-      alert("Hubo un problema al conectar con el escáner. Por favor, inténtalo de nuevo en unos momentos.");
+      alert("Hubo un problema al procesar el componente. Asegúrate de introducir un enlace válido de un procesador o tarjeta gráfica.");
     } finally {
       setIsLoading(false);
     }
