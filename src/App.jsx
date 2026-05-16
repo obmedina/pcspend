@@ -69,7 +69,7 @@ function App() {
 
   const theme = getBrandColor();
 
-  // Lógica de IA - CONFIGURADA PARA PRODUCCIÓN Y LOCAL
+  // Lógica de IA - CON FILTRO ULTRA TOLERANTE DE DETECCIÓN
   const handleAnalizarLink = async () => {
     if (!inputLink) return;
     setIsLoading(true);
@@ -87,31 +87,53 @@ function App() {
 
       const data = await response.json(); 
 
-      // CORRECCIÓN: Aseguramos que data y data.type existan antes de llamar métodos de string
-      const componenteTipo = data && data.type ? data.type.toLowerCase() : null;
+      // CORRECCIÓN: Normalizamos a minúsculas y aseguramos strings limpios para evitar nulos
+      const rawType = data && data.type ? String(data.type).toLowerCase() : '';
+      const rawName = data && data.name ? String(data.name).toLowerCase() : '';
 
-      if (componenteTipo === 'gpu') {
+      // MODIFICACIÓN DE SEGURIDAD: Múltiples formas de entender GPU y CPU (por tipo o palabras clave del nombre)
+      const esGpu = rawType.includes('gpu') || 
+                    rawType.includes('vga') || 
+                    rawType.includes('gráfica') || 
+                    rawType.includes('graphics') ||
+                    rawName.includes('geforce') || 
+                    rawName.includes('radeon') || 
+                    rawName.includes('rtx') || 
+                    rawName.includes('gtx') || 
+                    rawName.includes('graphics');
+
+      const esCpu = rawType.includes('cpu') || 
+                    rawType.includes('processor') || 
+                    rawType.includes('procesador') || 
+                    rawType.includes('core') ||
+                    rawName.includes('ryzen') || 
+                    rawName.includes('intel') || 
+                    rawName.includes('amd ryzen') ||
+                    rawName.includes('i3-') || 
+                    rawName.includes('i5-') || 
+                    rawName.includes('i7-') || 
+                    rawName.includes('i9-');
+
+      if (esGpu) {
         setGpuSeleccionada({
           id: 'gpu-ia',
           name: data.name || 'GPU Detectada',
           consumo: Number(data.tdp) || 200,
-          brand: data.name && data.name.toLowerCase().includes('amd') ? 'amd' : 'nvidia'
+          brand: rawName.includes('amd') ? 'amd' : rawName.includes('intel') ? 'intel' : 'nvidia'
         });
-      } else if (componenteTipo === 'cpu') {
+      } else if (esCpu) {
         setCpuSeleccionada({
           id: 'cpu-ia',
           name: data.name || 'CPU Detectada',
           consumo: Number(data.tdp) || 65
         });
       } else {
-        // Fallback por si la IA devuelve un tipo irreconocible o nulo
         throw new Error("No se pudo clasificar el componente como CPU o GPU de forma clara.");
       }
 
-      setInputLink(""); // Limpiar input
+      setInputLink(""); // Limpiar el input tras el éxito
       
-      // CORRECCIÓN: toUpperCase() blindado contra valores nulos o indefinidos
-      const tipoAlerta = componenteTipo ? componenteTipo.toUpperCase() : 'COMPONENTE';
+      const tipoAlerta = esGpu ? 'GPU' : 'CPU';
       alert(`¡${tipoAlerta} detectada con éxito!`);
 
     } catch (error) {
