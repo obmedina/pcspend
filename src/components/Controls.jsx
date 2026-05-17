@@ -5,7 +5,8 @@ const Controls = ({
   moneda, ajustarPrecio, 
   isLoading, handleAnalizarLink,
   inputLink, setInputLink,
-  isVariableRate, setIsVariableRate 
+  isVariableRate, setIsVariableRate,
+  scanStatus // <-- NUEVA PROP: Recibe el estado desde App.jsx
 }) => {
   return (
     <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-6 mb-16 border-t border-slate-800/50 pt-10">
@@ -57,13 +58,13 @@ const Controls = ({
       <div className="p-5 bg-slate-900/80 rounded-3xl border border-slate-800 flex flex-col justify-between min-h-[180px]">
         <div>
           <p className="text-[10px] font-bold text-slate-400 uppercase mb-3">AI {t.scan}</p>
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2 mb-2">
             <input 
               type="text" 
               value={inputLink} 
               onChange={(e) => setInputLink(e.target.value)} 
               placeholder={t.placeholder} 
-              disabled={isLoading} // <-- Bloqueado mientras carga
+              disabled={isLoading} 
               className={`flex-1 bg-slate-950 p-2 rounded-xl text-xs border border-slate-800 text-white outline-none focus:border-blue-500 transition-opacity ${isLoading ? 'opacity-50 cursor-not-allowed' : 'opacity-100'}`} 
             />
             <button 
@@ -74,8 +75,19 @@ const Controls = ({
               {isLoading ? "..." : t.scan}
             </button>
           </div>
+
+          {/* RENDEREADO DEL ESTADO IN-APP: Texto dinámico verde o rojo */}
+          {scanStatus && (
+            <p className={`text-[11px] font-semibold mt-3 tracking-tight transition-all leading-normal ${
+              scanStatus.type === 'success' ? 'text-green-400' : 'text-red-400'
+            }`}>
+              {scanStatus.text}
+            </p>
+          )}
         </div>
-        <p className="text-[12px] text-slate-400 italic leading-snug">{t.scanDesc}</p>
+        
+        {/* Este bloque baja automáticamente gracias al flex flex-col y justify-between */}
+        <p className="text-[12px] text-slate-400 italic leading-snug mt-3">{t.scanDesc}</p>
       </div>
     </div>
   )

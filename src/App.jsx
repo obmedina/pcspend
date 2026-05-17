@@ -27,6 +27,10 @@ function App() {
   const [inputLink, setInputLink] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
+  // NUEVO ESTADO: Controla el mensaje en texto que aparece debajo de la barra de escaneo
+  // Estructura: { text: "Mensaje a mostrar", type: "success" | "error" }
+  const [scanStatus, setScanStatus] = useState(null)
+
   const divisas = [
     { sym: '€', id: 'EUR', tasa: 1 },
     { sym: '$', id: 'USD', tasa: 1.08 },
@@ -69,10 +73,11 @@ function App() {
 
   const theme = getBrandColor();
 
-  // Lógica de IA - CON FILTRO ULTRA TOLERANTE DE DETECCIÓN
+  // Lógica de IA - MUESTRA TEXTO EN INTERFAZ EN LUGAR DE VENTANAS EMERGENTES
   const handleAnalizarLink = async () => {
     if (!inputLink) return;
     setIsLoading(true);
+    setScanStatus(null); // Limpiamos estados anteriores antes de escanear
 
     const API_URL = import.meta.env.VITE_API_URL || 'https://pc-spend-backend-production.up.railway.app';
 
@@ -87,60 +92,52 @@ function App() {
 
       const data = await response.json(); 
 
-      // CORRECCIÓN: Normalizamos a minúsculas y aseguramos strings limpios para evitar nulos
       const rawType = data && data.type ? String(data.type).toLowerCase() : '';
       const rawName = data && data.name ? String(data.name).toLowerCase() : '';
 
-      // MODIFICACIÓN DE SEGURIDAD: Múltiples formas de entender GPU y CPU (por tipo o palabras clave del nombre)
-      const esGpu = rawType.includes('gpu') || 
-                    rawType.includes('vga') || 
-                    rawType.includes('gráfica') || 
-                    rawType.includes('graphics') ||
-                    rawName.includes('geforce') || 
-                    rawName.includes('radeon') || 
-                    rawName.includes('rtx') || 
-                    rawName.includes('gtx') || 
-                    rawName.includes('graphics');
+      // Control estricto contra falsos enlaces o bloqueos antibot
+      if (rawType === 'none' || rawName.includes('security block') || rawName.includes('cloudflare')) {
+        throw new Error("El enlace introducido no pertenece a un componente de PC compatible o la tienda ha bloqueado temporalmente el acceso.");
+      }
 
-      const esCpu = rawType.includes('cpu') || 
-                    rawType.includes('processor') || 
-                    rawType.includes('procesador') || 
-                    rawType.includes('core') ||
-                    rawName.includes('ryzen') || 
-                    rawName.includes('intel') || 
-                    rawName.includes('amd ryzen') ||
-                    rawName.includes('i3-') || 
-                    rawName.includes('i5-') || 
-                    rawName.includes('i7-') || 
-                    rawName.includes('i9-');
-
-      if (esGpu) {
+      if (rawType === 'gpu') {
         setGpuSeleccionada({
           id: 'gpu-ia',
           name: data.name || 'GPU Detectada',
           consumo: Number(data.tdp) || 200,
           brand: rawName.includes('amd') ? 'amd' : rawName.includes('intel') ? 'intel' : 'nvidia'
         });
-      } else if (esCpu) {
+        setScanStatus({ text: `¡Tarjeta gráfica (${data.name}) vinculada con éxito!`, type: 'success' });
+
+      } else if (rawType === 'cpu') {
         setCpuSeleccionada({
           id: 'cpu-ia',
           name: data.name || 'CPU Detectada',
           consumo: Number(data.tdp) || 65
         });
-      } else {
-        throw new Error("No se pudo clasificar el componente como CPU o GPU de forma clara.");
-      }
+        setScanStatus({ text: `¡Procesador (${data.name}) vinculado con éxito!`, type: 'success' });
 
-      setInputLink(""); // Limpiar el input tras el éxito
-      
-      const tipoAlerta = esGpu ? 'GPU' : 'CPU';
-      alert(`¡${tipoAlerta} detectada con éxito!`);
+      } else if (rawType === 'monitor') {
+        setScanStatus({ text: `¡Monitor detectado con éxito!: ${data.name} (${data.tdp}W). Vincula su estado cuando lo requieras.`, type: 'success' });
+
+      } else if (rawType === 'periferico') {
+        setScanStatus({ text: `¡Periférico detectado con éxito!: ${data.name} (${data.tdp}W). Vincula su estado cuando lo requieras.`, type: 'success' });
+
+      } else {
+        throw new Error("Componente no soportado actualmente en la matriz de consumo.");
+      }
 
     } catch (error) {
       console.error("Error en el escáner:", error);
-      alert("Hubo un problema al procesar el componente. Asegúrate de introducir un enlace válido de un procesador o tarjeta gráfica.");
+      const msg = error.message.includes("fetch") || error.message.includes("servidor")
+        ? "Hubo un problema al conectar con el servidor de escaneo. Por favor, inténtalo de nuevo más tarde."
+        : error.message;
+      
+      // GUARDADO EN ROJO: Si hay un error, lo mandamos al estado para pintarlo debajo del input
+      setScanStatus({ text: msg, type: 'error' });
     } finally {
       setIsLoading(false);
+      setInputLink(""); // CORRECCIÓN: Vaciamos el input obligatoriamente al acabar (tanto si sale bien como si da error)
     }
   };
 
@@ -243,6 +240,7 @@ function App() {
           periSeleccionado={periSeleccionado} setPeriSeleccionado={setPeriSeleccionado}
         />
 
+        {/* PASAMOS LAS PROPIEDADES NUEVAS A CONTROLS */}
         <Controls 
           t={t}
           horas={horas} setHoras={setHoras}
@@ -255,6 +253,7 @@ function App() {
           setInputLink={setInputLink}
           isVariableRate={isVariableRate}
           setIsVariableRate={setIsVariableRate}
+          scanStatus={scanStatus} 
         />
 
         <Report 
