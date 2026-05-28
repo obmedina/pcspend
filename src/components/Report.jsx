@@ -15,100 +15,93 @@ const Report = ({
   gpuSeleccionada, 
   cpuSeleccionada, 
   monitorSeleccionado, 
-  periSeleccionado, 
+  periSeleccionados, 
+  aiPeriCustom,
   ramSeleccionada,
   ramCantidad,
   storageCantidades,
   txtNinguno,
   compartirImagen,
   descargarImagen,
-  generarCanvas // <-- RECIBIMOS LA PROP DE APP.JSX
+  generarCanvas 
 }) => {
   const formatPrecio = (valor) => valor.toFixed(moneda.id === 'JPY' ? 0 : 2);
 
-  // Estado de respaldo para entornos de escritorio incompatibles (como Chrome en Windows/Linux)
   const [showShareModal, setShowShareModal] = useState(false);
+  
+  // ESTADO: Controla la visibilidad de la ventana de agradecimiento / donación
+  const [showDonationModal, setShowDonationModal] = useState(false);
 
   // Lógica de Almacenamiento
   const storageActivos = ALMACENAMIENTO.filter(s => (storageCantidades[s.id] || 0) > 0);
   const totalVatiosStorage = storageActivos.reduce((sum, s) => sum + (s.consumo * storageCantidades[s.id]), 0);
   const textoStorage = storageActivos.map(s => `${s.name.split(' ')[0]} x${storageCantidades[s.id]}`).join(' + ') || txtNinguno;
 
-  // Lógica para calcular los vatios totales consumidos
+  // Lógica de vatios de periféricos multielección para el cálculo de vatios totales del reporte
+  const vatiosPerifericosReport = Object.keys(periSeleccionados || {}).reduce((total, id) => {
+    if (periSeleccionados[id] === 1) {
+      if (id === 'p6' && aiPeriCustom) return total + (aiPeriCustom.consumo || 25);
+      const pFijo = p1 => p1.id === id;
+      return total + (ALMACENAMIENTO.find(pFijo)?.consumo || 10); // fallback genérico por seguridad
+    }
+    return total;
+  }, 0);
+
   const consumoTotalVatios = 
     (gpuSeleccionada?.consumo || 0) + 
     (cpuSeleccionada?.consumo || 0) + 
     (monitorSeleccionado?.consumo || 0) + 
-    (periSeleccionado?.consumo || 0) + 
+    vatiosPerifericosReport +
     ((ramSeleccionada?.consumo || 0) * ramCantidad) + 
     totalVatiosStorage;
 
-  // Barra mide el dinero al mes. 50€/mes es el 100% de la barra.
-  const limiteGastoMaximo = 50; 
-  const rangePercentage = Math.min(100, Math.max(0, (costeMensual / limiteGastoMaximo) * 100));
-
+  const rangePercentage = Math.min(100, Math.max(0, (costeMensual / 50) * 100));
   const getIndicadorColor = () => {
     if (rangePercentage < 35) return 'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.8)]';
     if (rangePercentage < 70) return 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.8)]';
     return 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.8)]';
   };
 
-  // Mensaje optimizado en texto plano para redes sociales
-  const rawMsg = lang === 'EN' ? `My gaming PC costs me ${formatPrecio(costeMensual)}${moneda.sym}/month in electricity! Check yours on pcspend.com ⚡` :
-                 lang === 'FR' ? `Mon PC gamer me coûte ${formatPrecio(costeMensual)}${moneda.sym}/mois en électricité ! Calculez le vôtre sur pcspend.com ⚡` :
-                 lang === 'JP' ? `私のゲーミングPCの電気代は月額 ${formatPrecio(costeMensual)}${moneda.sym} です！ pcspend.com で確認する ⚡` :
-                 lang === 'DE' ? `Mein Gaming-PC kostet mich ${formatPrecio(costeMensual)}${moneda.sym}/Monat an Strom! Prüfe deinen auf pcspend.com ⚡` :
-                 lang === 'PT' ? `Meu PC gamer me custa ${formatPrecio(costeMensual)}${moneda.sym}/mês em eletricidade! Calcule o seu em pcspend.com ⚡` :
-                 `¡Mi PC gaming me cuesta ${formatPrecio(costeMensual)}${moneda.sym}/mes de luz! Calcula el tuyo en pcspend.com ⚡`;
-
+  const rawMsg = `¡Mi PC gaming me cuesta ${formatPrecio(costeMensual)}${moneda.sym}/mes de luz! Calcula el tuyo en pcspend.com ⚡`;
   const shareText = encodeURIComponent(rawMsg);
   const shareUrl = encodeURIComponent("https://pcspend.com");
 
-  // ================= MODIFICACIÓN CLAVE: COMPARTIR LA IMAGEN REAL GENERADA POR EL CANVAS =================
+  // INTERCEPTOR PARA EL BOTÓN SISTEMA COMPARTIR
   const handleShareSystem = async () => {
-    // Generamos el canvas dinámico con los datos actuales usando la función heredada de App.jsx
     const canvas = generarCanvas();
-    
     if (navigator.share && canvas) {
       try {
-        // Extraemos el blob del canvas mediante la promesa
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
         if (!blob) throw new Error("No se pudo generar el archivo de imagen");
-
-        // Creamos un archivo real compatible con el sistema operativo que contiene el diseño de la tarjeta
         const file = new File([blob], 'pc-spend-report.png', { type: 'image/png' });
 
-        // Si el dispositivo acepta compartir archivos (móviles, tablets, Safari Mac, etc.)
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: 'PC Spend Report',
-            text: rawMsg,
-            url: 'https://pcspend.com',
-            files: [file] // <-- SE COMPARTE LA IMAGEN GENERADA DEL INFORME CON TODO EL DISEÑO
-          });
+          await navigator.share({ title: 'PC Spend Report', text: rawMsg, url: 'https://pcspend.com', files: [file] });
+          setShowDonationModal(true);
           return;
         }
-        
-        // Fallback nativo si solo acepta texto
-        await navigator.share({
-          title: 'PC Spend Report',
-          text: rawMsg,
-          url: 'https://pcspend.com'
-        });
-        
+        await navigator.share({ title: 'PC Spend Report', text: rawMsg, url: 'https://pcspend.com' });
+        setShowDonationModal(true);
       } catch (error) {
-        console.log("Menú nativo cancelado o no disponible en este entorno, abriendo respaldo:", error);
+        console.log("Menú nativo cancelado o no disponible, abriendo respaldo:", error);
         setShowShareModal(true);
       }
     } else {
-      // Si entran desde ordenadores de sobremesa que no tienen menú de compartir nativo
       setShowShareModal(true);
     }
   };
 
+  // INTERCEPTOR PARA EL BOTÓN GUARDAR (DESCARGAR)
+  const handleDescargarConAgradecimiento = () => {
+    descargarImagen();
+    setTimeout(() => {
+      setShowDonationModal(true);
+    }, 600);
+  };
+
   const copiarEnlacePortapapeles = () => {
     navigator.clipboard.writeText("https://pcspend.com");
-    alert(lang === 'EN' ? "Link copied to clipboard!" : "¡Enlace copiado al portapapeles!");
+    alert("¡Enlace copiado al portapapeles!");
   };
 
   const cardBase = "bg-[#1b2234]/90 backdrop-blur-md border border-slate-800/50 shadow-[0_10px_30px_rgba(0,0,0,0.3)] rounded-2xl relative z-10";
@@ -147,7 +140,6 @@ const Report = ({
           </div>
         </div>
 
-        {/* Barra de Estrés del Gasto */}
         <div className="space-y-3 px-2 relative z-10">
           <div className="w-full h-2 bg-black/40 rounded-full relative">
             <div 
@@ -162,20 +154,15 @@ const Report = ({
             </div>
           </div>
           <p className="text-center text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">
-            {lang === 'EN' ? "BILL IMPACT" : lang === 'FR' ? "IMPACT SUR LA FACTURE" : lang === 'JP' ? "請求書への影響" : lang === 'DE' ? "RECHNUNGS-IMPACT" : lang === 'PT' ? "IMPACTO NA FATURA" : "IMPACTO EN LA FACTURA"}
+            {lang === 'EN' ? "BILL IMPACT" : "IMPACTO EN LA FACTURA"}
           </p>
         </div>
       </div>
 
       {/* 2. FILA MEDIA: CPU Y GPU */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
-        {/* FILA CPU */}
         <div className={`${cardBase} p-5 flex items-center gap-5`}>
-          <img 
-            src={getReportImg('cpu_icon.png')} 
-            alt="CPU Icon" 
-            className="w-10 h-10 object-contain opacity-90 filter drop-shadow-[0_2px_8px_rgba(34,197,94,0.2)]"
-          />
+          <img src={getReportImg('cpu_icon.png')} alt="CPU" className="w-10 h-10 object-contain opacity-90 filter drop-shadow-[0_2px_8px_rgba(34,197,94,0.2)]" />
           <div className="flex-grow">
             <div className="flex justify-between items-center mb-1">
               <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">CPU</span>
@@ -189,13 +176,8 @@ const Report = ({
           </div>
         </div>
 
-        {/* FILA GPU */}
         <div className={`${cardBase} p-5 flex items-center gap-5`}>
-          <img 
-            src={getReportImg('gpu_icon.png')} 
-            alt="GPU Icon" 
-            className="w-10 h-10 object-contain opacity-90 filter drop-shadow-[0_2px_8px_rgba(245,158,11,0.2)]"
-          />
+          <img src={getReportImg('gpu_icon.png')} alt="GPU" className="w-10 h-10 object-contain opacity-90 filter drop-shadow-[0_2px_8px_rgba(245,158,11,0.2)]" />
           <div className="flex-grow">
             <div className="flex justify-between items-center mb-1">
               <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">GPU</span>
@@ -210,32 +192,30 @@ const Report = ({
         </div>
       </div>
 
-      {/* 3. FILA INFERIOR: LOS 4 PEQUEÑOS */}
+      {/* 3. FILA INFERIOR: DETALLES */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
         <div className={`${cardBase} p-4 text-center`}>
-          <span className="text-[9px] font-black text-purple-400 uppercase block mb-1">
-            {t.step3 ? t.step3.replace(/[\d.\s]/g, '') : "MONITOR"}
-          </span>
+          <span className="text-[9px] font-black text-purple-400 uppercase block mb-1">MONITOR</span>
           <p className="text-sm font-black text-white truncate px-1 uppercase">{monitorSeleccionado ? monitorSeleccionado.name : txtNinguno}</p>
           <span className="text-[10px] font-bold text-slate-500">{monitorSeleccionado?.consumo || 0}W</span>
         </div>
 
         <div className={`${cardBase} p-4 text-center`}>
-          <span className="text-[9px] font-black text-orange-400 uppercase block mb-1">
-            {t.step4 ? t.step4.replace(/[\d.\s]/g, '') : "PERIFÉRICOS"}
-          </span>
-          <p className="text-sm font-black text-white truncate px-1 uppercase">{periSeleccionado ? periSeleccionado.name : txtNinguno}</p>
-          <span className="text-[10px] font-bold text-slate-500">{periSeleccionado?.consumo || 0}W</span>
+          <span className="text-[9px] font-black text-orange-400 uppercase block mb-1">PERIFÉRICOS</span>
+          <p className="text-sm font-black text-white truncate px-1 uppercase">
+            {Object.values(periSeleccionados || {}).some(v => v === 1) ? (lang === 'EN' ? 'CONNECTED' : 'CONECTADOS') : txtNinguno}
+          </p>
+          <span className="text-[10px] font-bold text-slate-500">{vatiosPerifericosReport}W</span>
         </div>
 
         <div className={`${cardBase} p-4 text-center`}>
-          <span className="text-[9px] font-black text-emerald-400 uppercase block mb-1">{t.storage || "ALMACENAMIENTO"}</span>
+          <span className="text-[9px] font-black text-emerald-400 uppercase block mb-1">ALMACENAMIENTO</span>
           <p className="text-sm font-black text-white truncate px-1 uppercase">{textoStorage}</p>
           <span className="text-[10px] font-bold text-slate-500">{totalVatiosStorage}W</span>
         </div>
 
         <div className={`${cardBase} p-4 text-center`}>
-          <span className="text-[9px] font-black text-pink-400 uppercase block mb-1">{t.ram || "RAM"}</span>
+          <span className="text-[9px] font-black text-pink-400 uppercase block mb-1">RAM</span>
           <p className="text-sm font-black text-white truncate px-1 uppercase">
             {ramSeleccionada ? `${ramSeleccionada.name.split(' ')[0]} x${ramCantidad}` : txtNinguno}
           </p>
@@ -251,87 +231,96 @@ const Report = ({
         >
           🔗 {t.share || "COMPARTIR INFORME"}
         </button>
-        <button onClick={descargarImagen} className="flex items-center justify-center gap-3 bg-[#1b2234] border border-slate-700 hover:bg-slate-800 text-white font-black py-4 rounded-xl transition-all active:scale-95 text-sm uppercase tracking-widest">
-          💾 {lang === 'EN' ? "SAVE" : lang === 'FR' ? "SAUVEGARDER" : lang === 'JP' ? "保存する" : lang === 'DE' ? "SPEICHERN" : lang === 'PT' ? "SALVAR" : "GUARDAR"}
+        <button 
+          onClick={handleDescargarConAgradecimiento} 
+          className="flex items-center justify-center gap-3 bg-[#1b2234] border border-slate-700 hover:bg-slate-800 text-white font-black py-4 rounded-xl transition-all active:scale-95 text-sm uppercase tracking-widest"
+        >
+          💾 {lang === 'EN' ? "SAVE" : "GUARDAR"}
         </button>
       </div>
 
       {/* MODAL DE RESPALDO MANUAL */}
       {showShareModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm transition-all duration-300">
-          <div className="bg-[#0f1422] border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative text-center animate-in fade-in zoom-in-95 duration-200">
-            
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#0f1422] border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative text-center">
             <button 
-              onClick={() => setShowShareModal(false)}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-slate-900 border border-slate-800 rounded-full text-slate-400 hover:text-white transition-colors"
+              onClick={() => { setShowShareModal(false); setShowDonationModal(true); }}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-slate-900 border border-slate-800 rounded-full text-slate-400 hover:text-white"
+            >
+              ✕
+            </button>
+            <h3 className="text-lg font-black bg-gradient-to-r from-white via-blue-200 to-cyan-100 bg-clip-text text-transparent uppercase tracking-tighter mb-1">
+              Compartir tu setup
+            </h3>
+            <p className="text-xs text-slate-400 mb-6">Elige tu red social preferida.</p>
+
+            <button
+              onClick={() => { compartirImagen(); setShowShareModal(false); setShowDonationModal(true); }}
+              className="w-full mb-4 flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-black font-black text-xs py-3.5 rounded-xl transition-all uppercase tracking-wider"
+            >
+              📋 Copiar Imagen del Informe
+            </button>
+
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <a onClick={() => { setShowShareModal(false); setShowDonationModal(true); }} href={`whatsapp://send?text=${shareText}%20${shareUrl}`} className="flex items-center justify-center gap-2 bg-[#128c7e]/20 border border-[#128c7e]/40 text-green-400 font-bold text-xs py-3 rounded-xl uppercase">🟢 WhatsApp</a>
+              <a onClick={() => { setShowShareModal(false); setShowDonationModal(true); }} href={`https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-slate-900 border border-slate-800 text-white font-bold text-xs py-3 rounded-xl uppercase">𝕏 Twitter</a>
+              <a onClick={() => { setShowShareModal(false); setShowDonationModal(true); }} href={`https://t.me/share/url?url=${shareUrl}&text=${shareText}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#0088cc]/20 border border-[#0088cc]/40 text-sky-400 font-bold text-xs py-3 rounded-xl uppercase">🔵 Telegram</a>
+              <a onClick={() => { setShowShareModal(false); setShowDonationModal(true); }} href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-slate-900 border border-slate-800 text-indigo-400 font-bold text-xs py-3 rounded-xl uppercase">📘 Facebook</a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL EMERGENTE: EDICIÓN EN TONOS AZULES/BLANCOS CON RAYO CYA ================= */}
+      {showDonationModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-[#070d19] border border-cyan-500/30 rounded-3xl p-8 w-full max-w-lg shadow-[0_0_50px_rgba(6,182,212,0.15)] relative text-center border-t-cyan-500/50 animate-in scale-in duration-200">
+            
+            {/* Botón X de Cierre */}
+            <button 
+              onClick={() => setShowDonationModal(false)}
+              className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 rounded-full text-slate-400 hover:text-white transition-colors"
             >
               ✕
             </button>
 
-            <h3 className="text-lg font-black bg-gradient-to-r from-white via-blue-200 to-cyan-100 bg-clip-text text-transparent uppercase tracking-tighter mb-1">
-              {lang === 'EN' ? "Share your build" : lang === 'FR' ? "Partager votre config" : lang === 'JP' ? "構成を共有する" : lang === 'DE' ? "Build teilen" : lang === 'PT' ? "Compartilhar config" : "Compartir tu setup"}
-            </h3>
-            <p className="text-xs text-slate-400 mb-6 leading-normal">
-              {lang === 'EN' ? "Choose your favorite network to show your electricity spending." : "Elige tu red social preferida para mostrar tu consumo estimado."}
-            </p>
-
-            <button
-              onClick={() => { compartirImagen(); setShowShareModal(false); }}
-              className="w-full mb-4 flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black font-black text-xs py-3.5 rounded-xl transition-all uppercase tracking-wider shadow-lg shadow-cyan-500/15"
-            >
-              📋 {lang === 'EN' ? "Copy Report Image" : "Copiar Imagen del Informe"}
-            </button>
-
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <a 
-                href={`whatsapp://send?text=${shareText}%20${shareUrl}`}
-                className="flex items-center justify-center gap-2 bg-[#128c7e]/20 border border-[#128c7e]/40 hover:bg-[#128c7e]/30 text-green-400 font-bold text-xs py-3 rounded-xl transition-all uppercase tracking-wider"
-              >
-                🟢 WhatsApp
-              </a>
-              <a 
-                href={`https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`}
-                target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl transition-all uppercase tracking-wider"
-              >
-                𝕏 Twitter
-              </a>
-              <a 
-                href={`https://t.me/share/url?url=${shareUrl}&text=${shareText}`}
-                target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 bg-[#0088cc]/20 border border-[#0088cc]/40 hover:bg-[#0088cc]/30 text-sky-400 font-bold text-xs py-3 rounded-xl transition-all uppercase tracking-wider"
-              >
-                🔵 Telegram
-              </a>
-              <a 
-                href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`}
-                target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 bg-[#3b5998]/20 border border-[#3b5998]/40 hover:bg-[#3b5998]/30 text-indigo-400 font-bold text-xs py-3 rounded-xl transition-all uppercase tracking-wider"
-              >
-                📘 Facebook
-              </a>
+            {/* Icono del Rayo Eléctrico Animado con Efecto Glow Azul de la Interfaz */}
+            <div className="w-20 h-20 bg-cyan-500/10 border border-cyan-400/30 text-cyan-400 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-[0_0_25px_rgba(34,211,238,0.3)] animate-pulse">
+              <Zap className="w-10 h-10 text-cyan-400 fill-cyan-400/20 filter drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
             </div>
 
-            <div className="border-t border-slate-900 pt-4 flex gap-2">
-              <input 
-                type="text" 
-                readOnly 
-                value="pcspend.com" 
-                className="flex-grow bg-slate-950 p-2.5 rounded-xl text-xs text-slate-400 border border-slate-900 outline-none text-center font-mono font-bold select-all"
-              />
-              <button 
-                onClick={copiarEnlacePortapapeles}
-                className="bg-cyan-500 hover:bg-cyan-400 text-black px-4 font-black text-xs uppercase tracking-wider rounded-xl transition-colors shrink-0"
+            {/* Título adaptado al degradado Blanco/Azul de PC Spend */}
+            <h3 className="text-2xl font-black bg-gradient-to-r from-white via-blue-200 to-cyan-100 bg-clip-text text-transparent uppercase tracking-tight mb-3">
+              ¡Gracias por usar PC Spend!
+            </h3>
+            
+            <div className="space-y-4 text-sm text-slate-300 leading-relaxed px-2">
+              <p>
+                He diseñado esta plataforma para que sea <span className="text-cyan-400 font-bold">gratuita</span> y <span className="text-cyan-400 font-bold">sin molestos anuncios intrusivos</span>. Mantener los servidores y mejorar los algoritmos requiere recursos.
+              </p>
+              <p className="text-slate-200 font-medium">
+                Si te fue útil y quieres apoyar el desarrollo de nuevas funciones, considera <span className="text-cyan-300 font-semibold">invitarme a un café</span>. ¡Cualquier ayuda marca la diferencia!
+              </p>
+            </div>
+
+            {/* Botón de Donación con Diseño Integrado a PC Spend (Glow Azul, Texto Blanco y Rayo) */}
+            <div className="mt-8 pt-2">
+              <a 
+                href="https://www.buymeacoffee.com/pcspend" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-black px-8 py-4 rounded-xl transition-all shadow-[0_0_25px_rgba(6,182,212,0.3)] hover:shadow-[0_0_35px_rgba(6,182,212,0.5)] active:scale-95 text-xs uppercase tracking-wider"
               >
-                {lang === 'EN' ? "Copy" : "Copiar"}
-              </button>
+                <span>Invítame a un café | PC Spend</span>
+                <Zap className="w-4 h-4 text-white fill-white" />
+              </a>
             </div>
 
             <button 
-              onClick={() => { descargarImagen(); setShowShareModal(false); }}
-              className="mt-4 text-[11px] font-bold text-slate-500 hover:text-slate-300 transition-colors uppercase tracking-widest block mx-auto underline decoration-slate-600 hover:decoration-slate-400"
+              onClick={() => setShowDonationModal(false)}
+              className="mt-5 text-[10px] font-bold text-slate-500 hover:text-slate-400 transition-colors uppercase tracking-widest block mx-auto hover:underline"
             >
-              {lang === 'EN' ? "Or download image report" : "O descargar reporte como imagen"}
+              Quizás en otro momento
             </button>
 
           </div>
