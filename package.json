@@ -13,8 +13,10 @@
     "@tailwindcss/postcss": "^4.3.0",
     "dom-to-image-more": "^3.7.2",
     "html2canvas": "^1.4.1",
+    "lucide-react": "^1.16.0",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "react-router-dom": "^7.15.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
