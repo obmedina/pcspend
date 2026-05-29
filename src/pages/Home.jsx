@@ -402,7 +402,7 @@ function Home() {
       { label: 'MONITOR', val: monitorSeleccionado ? (monitorSeleccionado.id === 'm6' ? 'AI SCAN' : monitorSeleccionado.name) : txtNinguno, watt: `${monitorSeleccionado?.consumo || 0}W`, color: '#a855f7', icon: '🖥️' },
       { label: 'PERIFÉRICOS', val: strPerifericosCanvas, watt: `${vatiosPerifericos}W`, color: '#f97316', icon: '⌨️' },
       { label: 'RAM', val: strRam, watt: `${(ramSeleccionada?.consumo || 0) * ramCantidad}W`, color: '#ec4899', icon: '💾' },
-      { label: 'ALMACENAMIENTO', val: strStorage, watt: `${vatiosStorage}W`, color: '#10b981', icon: '💽' } 
+      { label: 'ALMACENAMIENTO', val: strStorage, watt: `${vatiosStorage}W`, color: '#10b981', icon: '💽' } // CORREGIDO: Sintaxis saneada con backticks correctos
     ];
 
     const inicioY = 300; const altoFila = 85; const colA_X = 65; const colB_X = 335; const anchoCol = 200;
@@ -477,6 +477,8 @@ function Home() {
             ? 'Calculadora de Consumo Eléctrico PC Gaming | PC Spend' 
             : 'PC Power Consumption Calculator - Gaming PC Wattage | PC Spend'}
         </title>
+        {/* MODIFICADO: Restaurado el viewport nativo estándar que SÍ permite hacer zooms táctiles de accesibilidad */}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta 
           name="description" 
           content={
@@ -491,26 +493,26 @@ function Home() {
         />
         <link rel="canonical" href="https://pcspend.com" />
 
-        {/* MODIFICADO: Inyección de micro-estilos CSS definitivos de fuerza bruta con selectores comodín para Buy Me a Coffee en móviles */}
+        {/* MODIFICADO: Inyección de estilos ultra agresivos con scale(0.55) para un Buy Me a Coffee minúsculo y perfecto en móviles */}
         <style>
           {`
             @media (max-w: 768px) {
-              /* Forzar encogimiento masivo del widget flotante de BMC y su contenedor principal */
+              /* Forzar que el widget de BMC se encoja al máximo y no rompa márgenes */
               iframe[src*="buymeacoffee.com"], 
               #bmc-wbtn, 
               [id*="bmc-overlay"], 
               [class*="bmc-overlay"],
               div[style*="buymeacoffee"] {
-                transform: scale(0.65) !important;
+                transform: scale(0.55) !important;
                 transform-origin: bottom right !important;
-                bottom: 58px !important; /* Lo levantamos sobre la cápsula central mini del StickyTotal */
-                right: -5px !important;
-                max-width: 80vw !important; /* Capa de protección para que el chat flotante no se desborde */
+                bottom: 56px !important; /* Levantado sutilmente para salvar tu nuevo Sticky Total mini */
+                right: -12px !important;
+                max-w: 75vw !important;
               }
               
-              /* Si el widget desplegado se sale de la pantalla, controlamos su iframe interior de respuesta */
+              /* Ajuste de seguridad sobre el iframe de respuesta interna para que sea indexable al calce */
               [id*="bmc"] iframe, .bmc-iframe {
-                max-height: 65vh !important;
+                max-height: 55vh !important;
                 max-width: 100% !important;
               }
             }
@@ -518,7 +520,8 @@ function Home() {
         </style>
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-b from-[#0a0f24] via-[#070b19] to-[#040610] text-white p-4 md:p-6 font-sans transition-all flex flex-col">
+      {/* MODIFICADO: Añadido overflow-x-hidden y w-full para aniquilar el espacio blanco lateral en smartphones */}
+      <div className="min-h-screen bg-gradient-to-b from-[#0a0f24] via-[#070b19] to-[#040610] text-white p-4 md:p-6 font-sans transition-all flex flex-col w-full overflow-x-hidden">
         <div className="flex-grow">
           {/* Header */}
           <div className="flex flex-col md:flex-row justify-between items-center max-w-5xl mx-auto mb-8 gap-4">
