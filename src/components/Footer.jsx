@@ -53,18 +53,10 @@ const Footer = ({ t }) => {
   return (
     <footer className="mt-20 py-12 border-t border-slate-800/60 bg-[#0a0f1d]">
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12">
-        
-        {/* Columna 1: Branding */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-black text-white">PC Spend</h3>
-          <p className="text-slate-500 text-sm">
-            {t.disclaimer || "Calculadora de consumo energético para setups de alto rendimiento."}
-          </p>
-        </div>
 
         {/* Columna 2: Sobre nosotros */}
         <div className="space-y-4">
-          <h4 className="font-bold text-slate-300">Sobre nosotros</h4>
+          <h4 className="font-bold text-slate-300">PC SPEND</h4>
           <p className="text-sm text-slate-500 leading-relaxed">
             PC Spend es una herramienta independiente, sin anuncios ni rastreo de datos. 
             Si te resulta útil y quieres apoyar el desarrollo de más herramientas técnicas, 

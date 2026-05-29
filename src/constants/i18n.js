@@ -59,6 +59,14 @@ export const I18N = {
       (n) => { const v = Math.max(1, Math.round((n * 12) / 70)); return `Con este gasto anual comprarías ${v} juego${v === 1 ? '' : 's'} AAA 🎮` },
       (n) => { const v = Math.max(1, Math.round(n / 0.5)); return `Equivale a poner ${v} lavadora${v === 1 ? '' : 's'} al mes 🧺` },
       (n) => { const v = Math.max(1, Math.round(n / 10)); return `¡Tu setup consume como ${v} radiador${v === 1 ? '' : 'es'} eléctrico${v === 1 ? '' : 's'}! 🌡️` }
+    ],
+    // --- SECCIÓN FAQ OPTIMIZADA SEO ---
+    faqTitle: "Calculadora de Consumo Eléctrico PC - Preguntas Frecuentes",
+    faq: [
+      { q: "¿Cómo calcular el consumo en vatios (W) de un PC Gaming?", a: "Para calcular los vatios totales de tu ordenador, debes sumar el TDP oficial de componentes críticos como la tarjeta gráfica (GPU) y el procesador (CPU), junto al consumo de los módulos de memoria RAM, ventiladores, discos SSD/HDD y periféricos bajo carga de trabajo activa o jugando." },
+      { q: "¿Cuánto consume un PC Gamer al mes de luz en la factura eléctrica?", a: "El gasto mensual de luz depende del consumo total de tu setup (W), las horas diarias de uso y el precio por kWh de tu tarifa. Por ejemplo, un PC de 400W usado 4 horas al día consume unos 48 kWh al mes, lo que equivale a unos 7,20€ mensuales con una tarifa media de 0,15€/kWh." },
+      { q: "¿Cómo saber cuántos vatios consume mi tarjeta gráfica y procesador?", a: "Cada componente tiene una especificación de fábrica llamada TDP. Las tarjetas gráficas de gama alta actuales pueden consumir entre 200W y 450W en gaming, mientras que los procesadores oscilan entre los 65W y los 250W. Puedes escanear directamente tus componentes por IA usando nuestra herramienta superior." },
+      { q: "¿Qué fuente de alimentación necesito según el consumo de mi hardware?", a: "Es recomendable elegir una fuente de alimentación que cubra holgadamente el consumo total estimado de tu sistema, operando idealmente al 50%-80% de su capacidad total para maximizar la eficiencia energética (certificaciones 80 Plus Bronce, Oro o Platino)." }
     ]
   },
   EN: {
@@ -121,6 +129,14 @@ export const I18N = {
       (n) => { const v = Math.max(1, Math.round((n * 12) / 70)); return `This yearly cost buys ${v} AAA game${v === 1 ? '' : 's'} 🎮` },
       (n) => { const v = Math.max(1, Math.round(n / 0.5)); return `Equivalent to running ${v} laundry load${v === 1 ? '' : 's'} a month 🧺` },
       (n) => { const v = Math.max(1, Math.round(n / 10)); return `Your setup consumes like ${v} electric heater${v === 1 ? '' : 's'}! 🌡️` }
+    ],
+    // --- SEO OPTIMIZED FAQ SECTION ---
+    faqTitle: "PC Power Consumption Calculator - FAQ",
+    faq: [
+      { q: "How to calculate gaming PC power consumption in watts (W)?", a: "To calculate your computer's total wattage, add up the official TDP of core components like the graphics card (GPU) and processor (CPU), alongside the energy usage of RAM modules, case fans, SSD/HDD storage drives, and connected peripherals under workload." },
+      { q: "How much electricity does a gaming PC use per month?", a: "Monthly power cost depends on your PC total wattage, running hours per day, and your utility electricity rate per kWh. For instance, a 400W system active for 4 hours daily draws around 48 kWh per month, costing about $7.20/month at a $0.15/kWh rate." },
+      { q: "How do I check how many watts my GPU and CPU draw?", a: "Every hardware component lists a thermal spec called TDP. Modern high-end graphics cards pull between 200W and 450W while gaming, whereas processors range from 65W to 250W. You can automatically fetch your hardware specs using our AI scanner above." },
+      { q: "What power supply size (PSU) do I need for my computer components?", a: "It is highly recommended to choose a power supply capacity that clears your system's peak estimated wattage with comfortable headroom, ideally operating at 50%-80% load to secure peak efficiency (look for 80 Plus Bronze, Gold, or Platinum ratings)." }
     ]
   },
   FR: {
@@ -161,7 +177,7 @@ export const I18N = {
     peri_p2: 'GAMING STANDARD (SOURIS + CLAVIER RGB)',
     peri_p3: 'GAMING AVANCÉ (RGB SANS FIL + TAPIS RGB)',
     peri_p4: 'STARTER STREAMING (MICRO USB + WEBCAM)',
-    peri_p5: 'COCKPIT SIMRACING (VOLANT + PÉDALES DE BASE)',
+    peri_p5: 'COCKPIT SIMRACING (VOLANTE + PÉDALES DE BASE)',
     ram_r1: 'DDR3 STANDARD',
     ram_r2: 'DDR4 STANDARD',
     ram_r3: 'DDR5 PERFORMANCE',
@@ -183,6 +199,14 @@ export const I18N = {
       (n) => { const v = Math.max(1, Math.round((n * 12) / 70)); return `Ce coût annuel achète ${v} jeu${v <= 1 ? '' : 'x'} AAA 🎮` },
       (n) => { const v = Math.max(1, Math.round(n / 0.5)); return `Équivaut à faire ${v} lessive${v <= 1 ? '' : 's'} par mois 🧺` },
       (n) => { const v = Math.max(1, Math.round(n / 10)); return `Votre setup consomme comme un radiateur! 🌡️` }
+    ],
+    // --- SECTION FAQ OPTIMISÉE SEO ---
+    faqTitle: "Calculateur de Consommation Électrique PC - FAQ",
+    faq: [
+      { q: "Comment calculer la consommation en watts (W) d'un PC Gamer ?", a: "Pour calculer la puissance totale de votre ordinateur, additionnez le TDP officiel des composants comme la carte graphique (GPU) et le processeur (CPU), plus la consommation de la RAM, des ventilateurs, des disques SSD/HDD et des périphériques en charge." },
+      { q: "Combien consomme un PC gamer sur la facture d'électricité par mois ?", a: "Le coût mensuel dépend de la puissance de votre configuration, des heures d'utilisation et de votre tarif par kWh. Un PC de 400W utilisé 4h par jour consomme environ 48 kWh par mois, soit environ 7,20€/mois avec un tarif de 0,15€/kWh." },
+      { q: "Comment savoir combien de watts consomment ma carte graphique et mon processeur ?", a: "Chaque composant possède une spécification d'usine appelée TDP. Les cartes graphiques haut de gamme consomment entre 200W et 450W en jeu, et les processeurs entre 65W et 250W. Vous pouvez scanner votre matériel via notre outil IA ci-dessus." },
+      { q: "Quelle alimentation choisir par rapport à la consommation de mes composants ?", a: "Il est conseillé de choisir un bloc d'alimentation (PSU) qui couvre largement la puissance maximale estimée du système, opérant idéalement à 50%-80% de sa capacité pour maximiser l'efficacité énergétique (certifications 80 Plus Bronze, Gold ou Platinum)." }
     ]
   },
   JP: {
@@ -245,6 +269,14 @@ export const I18N = {
       (n) => `年間で最新ゲームを${Math.max(1, Math.round((n * 12) / 8000))}本買える計算です 🎮`,
       (n) => `洗濯機を月${Math.max(1, Math.round(n / 100))}回使用するのに相当します 🧺`,
       (n) => `小型電気ヒーター${Math.max(1, Math.round(n / 1500))}台と同じ消費電力です！ 🌡️`
+    ],
+    // --- SEO向けよくある質問セクション ---
+    faqTitle: "PC 消費電力 計算・シミュレーター - よくある質問",
+    faq: [
+      { q: "自作PCやゲーミングPCの消費電力（W）を計算する方法は？", a: "パソコン全体の電力量を計算するには、グラフィックボード(GPU)やCPUの公式TDP（熱設計電力）をベースに、RAMメモリ、ケースファン、SSD/HDDストレージ、および接続されている周辺機器のゲーム稼働時の消費電力を合算します。" },
+      { q: "ゲーミングPCの電気代は1ヶ月にいくらかかりますか？", a: "毎月の電気料金は、PCの合計ワット数(W)、1日の稼働時間、電気料金の単価(1kWhあたり)で決まります。例えば、400WのPCを1日4時間使用した場合、月間約48kWhとなり、単価を31円/ Bunとすると月約1,488円の電気代がかかります。" },
+      { q: "グラフィックボードやCPUの実際の消費ワット数を確認するには？", a: "各パーツには仕様にTDPが記載されています。最新のハイエンドグラボはゲーム中に200W〜450W、CPUは65W〜250Wを消費します。当サイト上のAIスキャナーを使えば、製品リンクから電力を自動シミュレーションできます。" },
+      { q: "PCパーツの消費電力に見合うおすすめの電源容量は？", a: "PCの想定最大消費電力に対して十分な余裕（ヘッドルーム）を持つ電源ユニット(PSU)を選ぶのが理想です。電源変換効率が最も高くなる容量の50%〜80%の負荷で運用できる製品（80 Plus Bronze, Gold, Platinum認証）を推奨します。" }
     ]
   },
   DE: {
@@ -307,6 +339,14 @@ export const I18N = {
       (n) => { const v = Math.max(1, Math.round((n * 12) / 70)); return `Mit diesen jährlichen Kosten könnten Sie ${v} AAA-Spiel${v === 1 ? '' : 'e'} kaufen 🎮` },
       (n) => { const v = Math.max(1, Math.round(n / 0.5)); return `Entspricht ${v} Waschgängen im Monat 🧺` },
       (n) => { const v = Math.max(1, Math.round(n / 10)); return `Ihr Setup verbraucht so viel wie ${v} Elektroheizung${v === 1 ? '' : 'en'}! 🌡️` }
+    ],
+    // --- SEO-OPTIMIERTER FAQ-BEREICH ---
+    faqTitle: "PC Stromverbrauch Rechner - Häufig gestellte Fragen",
+    faq: [
+      { q: "Wie berechnet man den Stromverbrauch eines Gaming-PCs in Watt (W)?", a: "Um die Gesamtwattzahl Ihres Computers zu berechnen, addieren Sie die offizielle TDP der Kernkomponenten wie Grafikkarte (GPU) und Prozessor (CPU) sowie den Energiebedarf von Arbeitsspeicher (RAM), Gehäuselüftern, SSD/HDD-Festplatten und Peripheriegeräten unter Volllast." },
+      { q: "Wie viel Stromkosten verursacht ein Gaming-PC im Monat?", a: "Die monatlichen Stromkosten hängen von der Gesamtwattzahl Ihres Setups, den täglichen Nutzungsstunden und dem kWh-Preis Ihres Stromvertrags ab. Ein 400W-PC bei 4 Stunden täglicher Nutzung verbraucht ca. 48 kWh im Monat, was bei einem Strompreis von 0,15 €/kWh etwa 7,20 € im Monat entspricht." },
+      { q: "Wie finde ich heraus, wie viel Watt meine Grafikkarte und CPU verbrauchen?", a: "Jede Hardwarekomponente hat eine Herstellerspezifikation namens TDP. Moderne High-End-Grafikkarten verbrauchen beim Gaming zwischen 200W und 450W, während CPUs zwischen 65W und 250W liegen. Sie können Ihre Hardware-Spezifikationen mit unserem KI-Scanner oben automatisch auslesen." },
+      { q: "Welches Netzteil (PSU) benötige ich basierend auf dem Hardware-Verbrauch?", a: "Es wird empfohlen, ein Netzteil zu wählen, dessen Kapazität über dem geschätzten Spitzenverbrauch des Systems liegt. Netzteile arbeiten am effizientesten bei einer Auslastung von 50%-80% (achten Sie auf Zertifizierungen wie 80 Plus Bronze, Gold oder Platinum)." }
     ]
   },
   PT: {
@@ -369,6 +409,14 @@ export const I18N = {
       (n) => { const v = Math.max(1, Math.round((n * 12) / 250)); return `Com esse custo anual, você compraria ${v} jogo${v === 1 ? '' : 's'} AAA 🎮` },
       (n) => { const v = Math.max(1, Math.round(n / 4)); return `Equivale a usar a máquina de lavar ${v} vezes no mês 🧺` },
       (n) => { const v = Math.max(1, Math.round(n / 60)); return `Seu setup consome como ${v} aquecedor${v === 1 ? '' : 'es'} elétrico${v === 1 ? '' : 'es'}! 🌡️` }
+    ],
+    // --- SEÇÃO FAQ OTIMIZADA SEO ---
+    faqTitle: "Calculadora de Consumo de Energia PC - Perguntas Frequentes",
+    faq: [
+      { q: "Como calcular o consumo em watts (W) de um PC Gaming?", a: "Para calcular os watts totais do seu computador, você deve somar o TDP oficial de componentes principais como a placa de vídeo (GPU) e o processador (CPU), junto com o consumo de energia dos módulos de memória RAM, ventoinhas, SSDs/HDDs e periféricos sob carga." },
+      { q: "Quanto consome um PC gamer por mês na conta de luz?", a: "O gasto mensal de energia depende dos watts totais do seu setup, horas diárias de uso e a tarifa da sua distribuidora por kWh. Por exemplo, um PC de 400W usado 4 horas por dia consome cerca de 48 kWh por mês, custando aproximadamente R$ 7,20/mês com uma tarifa de R$ 0,15/kWh." },
+      { q: "Como saber quantos watts minha placa de vídeo e processador consomem?", a: "Cada componente de hardware possui uma especificação de fábrica chamada TDP. Placas de vídeo topo de linha atuais podem puxar entre 200W e 450W jogando, enquanto processadores variam de 65W a 250W. Você pode escanear diretamente os componentes por IA usando nosso scanner acima." },
+      { q: "Qual fonte de alimentação (PSU) eu preciso com base no consumo do hardware?", a: "É altamente recomendável escolher uma fonte de alimentação que cubra com folga a potência máxima estimada do sistema, operando idealmente entre 50%-80% da sua capacidade total para garantir a máxima eficiência energética (certificações 80 Plus Bronze, Gold ou Platinum)." }
     ]
   }
 };

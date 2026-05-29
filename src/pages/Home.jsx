@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { GPUS, CPUS, MONITORES, PERIFERICOS, RAM, ALMACENAMIENTO } from '../data/hardware'
 import { I18N } from '../constants/i18n'
-import { Link } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // IMPORTADO PARA SEO
 
 // Importación de componentes
 import HardwareGrid from '../components/HardwareGrid'
@@ -15,9 +16,19 @@ import AiScanExpress from '../components/AiScanExpress'
 import logoWeb from '../assets/web/logo.png' 
 
 function Home() {
-  const [lang, setLang] = useState('ES')
+  // LÓGICA DE DETECCIÓN AUTOMÁTICA Y PERSISTENCIA DE IDIOMA
+  const [lang, setLang] = useState(() => {
+    const savedLang = localStorage.getItem('pcspend_lang');
+    if (savedLang) return savedLang;
+
+    const browserLang = navigator.language || navigator.userLanguage;
+    const primaryLang = browserLang.split('-')[0].toUpperCase();
+    const idiomasSoportados = ['ES', 'EN', 'FR', 'JP', 'DE', 'PT'];
+    
+    return idiomasSoportados.includes(primaryLang) ? primaryLang : 'ES';
+  });
+
   const t = I18N[lang]
-  
   const txtNinguno = t.none || "NINGUNO";
 
   // Estados de selection individuales tradicionales (Arrancan limpios en NINGUNO)
@@ -27,7 +38,7 @@ function Home() {
   const [ramSeleccionada, setRamSeleccionada] = useState(null)
   const [ramCantidad, setRamCantidad] = useState(0)
 
-  // MODIFICADO: Periféricos convertidos en estructura indexada multielección (On: 1 / Off: 0)
+  // Periféricos convertidos en estructura indexada multielección (On: 1 / Off: 0)
   const [periSeleccionados, setPeriSeleccionados] = useState({ 'p1': 0, 'p2': 0, 'p3': 0, 'p4': 0, 'p5': 0, 'p6': 0 })
   
   // Estado de respaldo dinámico para cuando la IA inyecte un periférico customizado en el slot 'p6'
@@ -36,7 +47,7 @@ function Home() {
   // Estructura indexada compatible inicializada a cero unidades
   const [storageCantidades, setStorageCantidades] = useState({ 's1': 0, 's2': 0, 's3': 0, 's4': 0, 's5': 0, 's6': 0 })
   
-  // Estados de configuración
+  // Estados de configuration
   const [horas, setHoras] = useState(4)
   const [precioKwh, setPrecioKwh] = useState(0.15)
   const [moneda, setMoneda] = useState({ sym: '€', id: 'EUR', tasa: 1 })
@@ -60,10 +71,9 @@ function Home() {
   // Lógica de cálculo acumulativa para el Almacenamiento Múltiple de 6 slots
   const vatiosStorage = ALMACENAMIENTO.reduce((total, s) => total + (s.consumo * (storageCantidades[s.id] || 0)), 0)
 
-  // MODIFICADO: Lógica de cálculo acumulativo para la multielección de Periféricos
+  // Lógica de cálculo acumulativo para la multielección de Periféricos
   const vatiosPerifericos = PERIFERICOS.reduce((total, p) => {
     const estáActivo = periSeleccionados[p.id] || 0;
-    // Si es el slot p6 (AI SCAN), multiplicamos por los vatios dinámicos guardados en el estado de respaldo
     if (p.id === 'p6' && aiPeriCustom) {
       return total + (aiPeriCustom.consumo * estáActivo);
     }
@@ -92,26 +102,30 @@ function Home() {
     return `${nom}${cant > 1 ? ` x${cant}` : ''}`;
   }).join(' + ');
 
-  // MODIFICADO: Construcción de cadena de texto compacta de periféricos activos para el StickyTotal
+  // Construcción de cadena de texto compacta de periféricos activos para el StickyTotal
   const perifericosActivos = PERIFERICOS.filter(p => (periSeleccionados[p.id] || 0) > 0);
   const textoPeriCompacto = perifericosActivos.map(p => {
     if (p.id === 'p6' && aiPeriCustom) return 'AI SCAN';
-    return p.name.split(' ')[0]; // Extrae la primera palabra ("BÁSICO", "GAMING", etc.)
+    return p.name.split(' ')[0]; 
   }).join(' + ') || txtNinguno;
 
   useEffect(() => {
     setTemplateIndex(Math.floor(Math.random() * t.templates.length));
   }, [lang, t.templates.length]);
 
-  // LÓGICA DE DETECCIÓN DE SCROLL OPTIMIZADA
+  // LÓGICA DE SCROLL COMPATIBLE CON MÓVILES Y PANTALLAS GRANDES
   useEffect(() => {
     const handleScroll = () => {
-      const hitoScroll = document.documentElement.scrollHeight - window.innerHeight - 550;
+      const alturaTotalDoc = document.documentElement.scrollHeight;
+      const alturaVentana = window.innerHeight;
+      const scrollActual = window.scrollY;
       
-      if (window.scrollY < hitoScroll) {
-        setShowSticky(true);
-      } else {
+      const distanciaAlFondo = alturaTotalDoc - alturaVentana - scrollActual;
+      
+      if (distanciaAlFondo < 250) {
         setShowSticky(false);
+      } else {
+        setShowSticky(true);
       }
     };
 
@@ -132,6 +146,11 @@ function Home() {
   const ajustarPrecio = (delta) => {
     const magnitude = moneda.id === 'JPY' ? Math.sign(delta) * 1 : delta;
     setPrecioKwh(prev => Math.max(0, parseFloat((prev + magnitude).toFixed(moneda.id === 'JPY' ? 0 : 2))));
+  };
+
+  const seleccionarIdioma = (nuevoIdioma) => {
+    setLang(nuevoIdioma);
+    localStorage.setItem('pcspend_lang', nuevoIdioma);
   };
 
   const getBrandColor = () => {
@@ -295,10 +314,8 @@ function Home() {
             const coincidenciaFija = listaPerifericosFijos.find(p => comp.name.toLowerCase().includes(p.name.toLowerCase().split(' ')[0]));
 
             if (coincidenciaFija) {
-              // Si coincide con tu grid fijo, activamos ese periférico sin borrar los otros que ya estuvieran encendidos
               setPeriSeleccionados(prev => ({ ...prev, [coincidenciaFija.id]: 1 }));
             } else {
-              // MODIFICADO: Comportamiento de sobreescritura estricta para el AI SCAN de Periféricos
               const customObjeto = {
                 id: 'p6',
                 isAiGenerated: true,
@@ -307,7 +324,6 @@ function Home() {
                 img: PERIFERICOS.find(p => p.id === 'p6')?.img
               };
               setAiPeriCustom(customObjeto);
-              // Forzamos que se encienda la casilla p6 (y si ya estaba, se sobrepone con los nuevos datos)
               setPeriSeleccionados(prev => ({ ...prev, 'p6': 1 }));
             }
           }
@@ -344,8 +360,7 @@ function Home() {
     ctx.roundRect(0, 0, 600, 740, 40); 
     ctx.fill();
     
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)'; ctx.lineWidth = 1;
     ctx.stroke();
 
     ctx.textAlign = 'center'; 
@@ -378,12 +393,7 @@ function Home() {
 
     const nombreRamCanvas = ramSeleccionada?.id === 'r6' ? 'AI SCAN' : (ramSeleccionada ? ramSeleccionada.name.split(' ')[0] : txtNinguno);
     const strRam = ramSeleccionada ? `${nombreRamCanvas} x${ramCantidad}` : txtNinguno;
-    const strStorage = storageActivos.map(s => {
-      const nomDisco = s.id === 's6' ? 'AI SCAN' : s.name.split(' ')[0];
-      return `${nomDisco} (x${storageCantidades[s.id]})`;
-    }).join(' + ') || txtNinguno;
-
-    // MODIFICADO: Mapeo de periféricos acumulados para el canvas final
+    const strStorage = storageActivos.map(s => `${s.id === 's6' ? 'AI SCAN' : s.name.split(' ')[0]} (x${storageCantidades[s.id]})`).join(' + ') || txtNinguno;
     const strPerifericosCanvas = perifericosActivos.map(p => p.id === 'p6' ? 'AI SCAN' : p.name.split(' ')[0]).join(' + ') || txtNinguno;
 
     const itemsGrid = [
@@ -392,14 +402,10 @@ function Home() {
       { label: 'MONITOR', val: monitorSeleccionado ? (monitorSeleccionado.id === 'm6' ? 'AI SCAN' : monitorSeleccionado.name) : txtNinguno, watt: `${monitorSeleccionado?.consumo || 0}W`, color: '#a855f7', icon: '🖥️' },
       { label: 'PERIFÉRICOS', val: strPerifericosCanvas, watt: `${vatiosPerifericos}W`, color: '#f97316', icon: '⌨️' },
       { label: 'RAM', val: strRam, watt: `${(ramSeleccionada?.consumo || 0) * ramCantidad}W`, color: '#ec4899', icon: '💾' },
-      { label: 'ALMACENAMIENTO', val: strStorage, watt: `${vatiosStorage}W`, color: '#10b981', icon: '💽' }
+      { label: 'ALMACENAMIENTO', val: strStorage, watt: `${vatiosStorage}W`, color: '#10b981', icon: '💽' } 
     ];
 
-    const inicioY = 300; 
-    const altoFila = 85;  
-    const colA_X = 65;  
-    const colB_X = 335; 
-    const anchoCol = 200;
+    const inicioY = 300; const altoFila = 85; const colA_X = 65; const colB_X = 335; const anchoCol = 200;
 
     itemsGrid.forEach((item, index) => {
       const esColB = index % 2 !== 0;
@@ -408,20 +414,10 @@ function Home() {
       const posX = esColB ? colB_X : colA_X;
       const posY = inicioY + (fila * altoFila);
 
-      ctx.textAlign = 'left';
-      ctx.font = '24px sans-serif';
-      ctx.fillText(item.icon, posX, posY + 20);
-
-      ctx.font = '900 11px sans-serif';
-      ctx.fillStyle = item.color;
-      ctx.fillText(item.label, posX + 40, posY);
-
-      ctx.font = '700 11px sans-serif';
-      ctx.fillStyle = '#475569';
-      ctx.fillText(`(${item.watt})`, posX + 45 + ctx.measureText(item.label).width, posY);
-
-      ctx.font = '700 15px sans-serif';
-      ctx.fillStyle = '#f8fafc'; 
+      ctx.textAlign = 'left'; ctx.font = '24px sans-serif'; ctx.fillText(item.icon, posX, posY + 20);
+      ctx.font = '900 11px sans-serif'; ctx.fillStyle = item.color; ctx.fillText(item.label, posX + 40, posY);
+      ctx.font = '700 11px sans-serif'; ctx.fillStyle = '#475569'; ctx.fillText(`(${item.watt})`, posX + 45 + ctx.measureText(item.label).width, posY);
+      ctx.font = '700 15px sans-serif'; ctx.fillStyle = '#f8fafc'; 
       
       let cleanVal = item.val.toUpperCase();
       if (ctx.measureText(cleanVal).width > anchoCol) {
@@ -435,24 +431,15 @@ function Home() {
 
     const divisorY = 585; 
     
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(50, divisorY);
-    ctx.lineTo(550, divisorY);
-    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(50, divisorY); ctx.lineTo(550, divisorY); ctx.stroke();
 
-    ctx.textAlign = 'center';
-    ctx.font = '700 12px sans-serif';
-    ctx.fillStyle = '#475569';
+    ctx.textAlign = 'center'; ctx.font = '700 12px sans-serif'; ctx.fillStyle = '#475569';
     ctx.fillText(`CONSUMO ESTIMADO: ${consumoTotal}W  |  TARIFA APLICADA: ${precioKwh}${moneda.sym}/kWh`, 300, divisorY + 30);
 
     ctx.save();
-    ctx.shadowColor = 'rgba(34, 211, 238, 0.4)';
-    ctx.shadowBlur = 15;
-    ctx.font = '900 22px sans-serif';
-    ctx.fillStyle = '#22d3ee'; 
-    ctx.letterSpacing = '2px';
+    ctx.shadowColor = 'rgba(34, 211, 238, 0.4)'; ctx.shadowBlur = 15;
+    ctx.font = '900 22px sans-serif'; ctx.fillStyle = '#22d3ee'; ctx.letterSpacing = '2px';
     ctx.fillText(appUrl, 300, divisorY + 75);
     ctx.restore();
 
@@ -466,9 +453,7 @@ function Home() {
       link.download = `pc-spend-report.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
-    } catch (error) {
-      console.error("Error al descargar el reporte visual:", error);
-    }
+    } catch (error) { console.error("Error al descargar el reporte visual:", error); }
   };
 
   const compartirImagen = async () => {
@@ -476,122 +461,179 @@ function Home() {
       const canvas = generarCanvas();
       canvas.toBlob(async (blob) => {
         if (blob) {
-          await navigator.clipboard.write([
-            new ClipboardItem({ "image/png": blob })
-          ]);
+          await navigator.clipboard.write([ new ClipboardItem({ "image/png": blob }) ]);
           alert("¡Reporte copiado como imagen al portapapeles! Ya puedes pegarlo directamente.");
         }
       });
-    } catch (err) {
-      console.error("No se pudo copiar la imagen automáticamente:", err);
-    }
+    } catch (err) { console.error("No se pudo copiar la imagen automáticamente:", err); }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0f24] via-[#070b19] to-[#040610] text-white p-4 md:p-6 font-sans transition-all flex flex-col">
-      <div className="flex-grow">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-center max-w-5xl mx-auto mb-8 gap-4">
-          
-    <Link to="/" className="flex items-center gap-3 transition-transform hover:scale-105">
-        <img 
-            src={logoWeb} 
-            alt="PC Spend Logo" 
-            className="w-10 h-10 md:w-12 md:h-12 object-contain filter drop-shadow-[0_2px_8px_rgba(44,147,255,0.3)]" 
+    <>
+      {/* ================= INYECCIÓN DE METAETIQUETAS DINÁMICAS Y ESTILOS GLOBALES (SEO + FIXES MÓVIL) ================= */}
+      <Helmet>
+        <title>
+          {lang === 'ES' 
+            ? 'Calculadora de Consumo Eléctrico PC Gaming | PC Spend' 
+            : 'PC Power Consumption Calculator - Gaming PC Wattage | PC Spend'}
+        </title>
+        <meta 
+          name="description" 
+          content={
+            lang === 'ES'
+              ? 'Calcula cuánto consume tu PC en vatios (W) y el coste real en tu factura de la luz. Escanea componentes por IA desde Amazon o PcComponentes.'
+              : 'Calculate your gaming PC power consumption in watts (W) and its real electricity bill cost. Scan hardware components with AI from Amazon.'
+          } 
         />
-        <h1 className="text-2xl md:text-3xl font-black bg-gradient-to-r from-white via-blue-200 to-cyan-100 bg-clip-text text-transparent uppercase tracking-tighter filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-            {t.title}
-        </h1>
-    </Link>
+        <meta 
+          name="keywords" 
+          content="calculadora consumo pc, vatios pc gamer, pc power consumption calculator, gaming pc wattage, electricity cost pc, pc spend" 
+        />
+        <link rel="canonical" href="https://pcspend.com" />
 
-          <div className="flex gap-4">
-            <div className="flex flex-wrap bg-slate-900/60 rounded-xl p-1 border border-slate-800/80 justify-center backdrop-blur-md">
-              {['ES', 'EN', 'FR', 'JP', 'DE', 'PT'].map(l => (
-                <button key={l} onClick={() => setLang(l)} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${lang === l ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}>{l}</button>
-              ))}
-            </div>
-            <div className="flex bg-slate-900/60 rounded-xl p-1 border border-slate-800/80 backdrop-blur-md">
-              {divisas.map(d => (
-                <button key={d.id} onClick={() => cambiarMoneda(d)} className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${moneda.id === d.id ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}>{d.id}</button>
-              ))}
+        {/* MODIFICADO: Inyección de micro-estilos CSS definitivos de fuerza bruta con selectores comodín para Buy Me a Coffee en móviles */}
+        <style>
+          {`
+            @media (max-w: 768px) {
+              /* Forzar encogimiento masivo del widget flotante de BMC y su contenedor principal */
+              iframe[src*="buymeacoffee.com"], 
+              #bmc-wbtn, 
+              [id*="bmc-overlay"], 
+              [class*="bmc-overlay"],
+              div[style*="buymeacoffee"] {
+                transform: scale(0.65) !important;
+                transform-origin: bottom right !important;
+                bottom: 58px !important; /* Lo levantamos sobre la cápsula central mini del StickyTotal */
+                right: -5px !important;
+                max-width: 80vw !important; /* Capa de protección para que el chat flotante no se desborde */
+              }
+              
+              /* Si el widget desplegado se sale de la pantalla, controlamos su iframe interior de respuesta */
+              [id*="bmc"] iframe, .bmc-iframe {
+                max-height: 65vh !important;
+                max-width: 100% !important;
+              }
+            }
+          `}
+        </style>
+      </Helmet>
+
+      <div className="min-h-screen bg-gradient-to-b from-[#0a0f24] via-[#070b19] to-[#040610] text-white p-4 md:p-6 font-sans transition-all flex flex-col">
+        <div className="flex-grow">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row justify-between items-center max-w-5xl mx-auto mb-8 gap-4">
+            
+            {/* Logo e isotipo más grandes y llamativos en móviles (w-14 h-14) */}
+            <RouterLink to="/" className="flex items-center gap-3 transition-transform hover:scale-105">
+              <img 
+                src={logoWeb} 
+                alt="PC Spend Logo" 
+                className="w-14 h-14 md:w-12 md:h-12 object-contain filter drop-shadow-[0_2px_10px_rgba(34,211,238,0.4)]" 
+              />
+              <h1 className="text-2xl md:text-3xl font-black bg-gradient-to-r from-white via-blue-200 to-cyan-100 bg-clip-text text-transparent uppercase tracking-tighter filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+                {t.title}
+              </h1>
+            </RouterLink>
+
+            {/* Contenedor flex horizontal que iguala alturas y simetría en móviles */}
+            <div className="flex flex-row gap-3 w-full md:w-auto justify-center items-center">
+              
+              {/* Idiomas: Mapeo lineal idéntico al de las monedas en lugar de rejilla alta */}
+              <div className="flex bg-slate-900/60 rounded-xl p-1 border border-slate-800/80 backend-blur-md h-9 items-center overflow-x-auto scrollbar-none max-w-[155px] xs:max-w-none">
+                {['ES', 'EN', 'FR', 'JP', 'DE', 'PT'].map(l => (
+                  <button 
+                    key={l} 
+                    onClick={() => seleccionarIdioma(l)} 
+                    className={`px-2 py-1 rounded-lg text-[10px] md:text-xs font-black transition-all shrink-0 h-7 flex items-center justify-center ${lang === l ? 'bg-blue-600 text-white shadow-md font-black' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+
+              {/* Monedas: Ahora mide exactamente los mismos h-9 y se comporta igual */}
+              <div className="flex bg-slate-900/60 rounded-xl p-1 border border-slate-800/80 backdrop-blur-md h-9 items-center overflow-x-auto scrollbar-none">
+                {divisas.map(d => (
+                  <button 
+                    key={d.id} 
+                    onClick={() => cambiarMoneda(d)} 
+                    className={`px-3 py-1 rounded-lg text-[10px] md:text-xs font-black transition-all shrink-0 h-7 flex items-center justify-center ${moneda.id === d.id ? 'bg-blue-600 text-white shadow-md font-black' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    {d.id}
+                  </button>
+                ))}
+              </div>
+
             </div>
           </div>
+          
+          <AiScanExpress t={t} inputLink={inputLink} setInputLink={setInputLink} isLoading={isLoading} handleAnalizarLink={handleAnalizarLink} scanStatus={scanStatus} />
+
+          <HardwareGrid 
+            t={t} theme={theme}
+            gpuSeleccionada={gpuSeleccionada} setGpuSeleccionada={setGpuSeleccionada}
+            cpuSeleccionada={cpuSeleccionada} setCpuSeleccionada={setCpuSeleccionada}
+            monitorSeleccionado={monitorSeleccionado} setMonitorSeleccionado={setMonitorSeleccionado}
+            periSeleccionados={periSeleccionados} setPeriSeleccionados={setPeriSeleccionados}
+            aiPeriCustom={aiPeriCustom} setAiPeriCustom={setAiPeriCustom}
+            ramSeleccionada={ramSeleccionada} setRamSeleccionada={setRamSeleccionada}
+            ramCantidad={ramCantidad} setRamCantidad={setRamCantidad}
+            storageCantidades={storageCantidades} setStorageCantidades={setStorageCantidades}
+            txtNinguno={txtNinguno}
+          />
+
+          <Controls t={t} horas={horas} setHoras={setHoras} precioKwh={precioKwh} setPrecioKwh={setPrecioKwh} moneda={moneda} ajustarPrecio={ajustarPrecio} isVariableRate={isVariableRate} setIsVariableRate={setIsVariableRate} />
+
+          <Report t={t} lang={lang} theme={theme} costeMensual={costeMensual} costeDiario={costeDiario} moneda={moneda} gpuSeleccionada={gpuSeleccionada} cpuSeleccionada={cpuSeleccionada} monitorSeleccionado={monitorSeleccionado} periSeleccionados={periSeleccionados} aiPeriCustom={aiPeriCustom} ramSeleccionada={ramSeleccionada} ramCantidad={ramCantidad} storageCantidades={storageCantidades} txtNinguno={txtNinguno} compartirImagen={compartirImagen} descargarImagen={descargarImagen} generarCanvas={generarCanvas} />
         </div>
-        
-        <AiScanExpress 
-          t={t}
-          inputLink={inputLink}
-          setInputLink={setInputLink}
-          isLoading={isLoading}
-          handleAnalizarLink={handleAnalizarLink}
-          scanStatus={scanStatus}
+
+        {/* ================= SECCIÓN DE PREGUNTAS FRECUENTES (FAQ) INTERACTIVA Y TRADUCIBLE ================= */}
+        {t.faq && (
+          <section className="max-w-4xl w-full mx-auto my-16 px-4 relative z-10">
+            <h2 className="text-xl md:text-2xl font-black bg-gradient-to-r from-white via-blue-200 to-cyan-100 bg-clip-text text-transparent uppercase tracking-tight text-center mb-8">
+              {t.faqTitle || "Preguntas Frecuentes"}
+            </h2>
+            <div className="space-y-4">
+              {t.faq.map((item, index) => (
+                <details 
+                  key={index} 
+                  className="group bg-[#131a2e]/60 border border-slate-800/70 rounded-2xl p-5 [&_summary::-webkit-details-marker]:hidden cursor-pointer transition-all duration-300 hover:border-cyan-500/30 select-none"
+                >
+                  <summary className="flex justify-between items-center font-bold text-slate-200 text-sm md:text-base gap-4">
+                    <span>{item.q}</span>
+                    <span className="text-cyan-400 text-xs transition-transform duration-300 group-open:-rotate-180 shrink-0">
+                      ▼
+                    </span>
+                  </summary>
+                  <p className="mt-4 text-xs md:text-sm text-slate-400 leading-relaxed border-t border-slate-800/50 pt-3 animate-in fade-in duration-200">
+                    {item.a}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Mapeo de propiedades cortocutadas blindado contra nulos */}
+        <StickyTotal 
+          lang={lang || 'ES'} 
+          costeMensual={costeMensual || 0} 
+          costeDiario={costeDiario || 0} 
+          moneda={moneda || { sym: '€', id: 'EUR', tasa: 1 }} 
+          consumoTotal={consumoTotal || 0} 
+          visible={showSticky} 
+          gpuSeleccionada={gpuSeleccionada || null} 
+          cpuSeleccionada={cpuSeleccionada || null} 
+          monitorSeleccionado={monitorSeleccionado || null} 
+          textoPerifericos={textoPeriCompacto || ''} 
+          ramSeleccionada={ramSeleccionada || null} 
+          textoStorage={textoStorageCompacto || ''} 
+          txtNinguno={txtNinguno || 'NINGUNO'} 
         />
 
-        {/* MODIFICADO: Pasamos los nuevos estados multielección indexados a HardwareGrid */}
-        <HardwareGrid 
-          t={t}
-          theme={theme}
-          gpuSeleccionada={gpuSeleccionada} setGpuSeleccionada={setGpuSeleccionada}
-          cpuSeleccionada={cpuSeleccionada} setCpuSeleccionada={setCpuSeleccionada}
-          monitorSeleccionado={monitorSeleccionado} setMonitorSeleccionado={setMonitorSeleccionado}
-          periSeleccionados={periSeleccionados} setPeriSeleccionados={setPeriSeleccionados}
-          aiPeriCustom={aiPeriCustom} setAiPeriCustom={setAiPeriCustom}
-          ramSeleccionada={ramSeleccionada} setRamSeleccionada={setRamSeleccionada}
-          ramCantidad={ramCantidad} setRamCantidad={setRamCantidad}
-          storageCantidades={storageCantidades} setStorageCantidades={setStorageCantidades}
-          txtNinguno={txtNinguno}
-        />
-
-        <Controls 
-          t={t}
-          horas={horas} setHoras={setHoras}
-          precioKwh={precioKwh} setPrecioKwh={setPrecioKwh}
-          moneda={moneda}
-          ajustarPrecio={ajustarPrecio}
-          isVariableRate={isVariableRate}
-          setIsVariableRate={setIsVariableRate}
-        />
-
-        <Report 
-          t={t}
-          lang={lang} 
-          theme={theme}
-          costeMensual={costeMensual}
-          costeDiario={costeDiario}
-          moneda={moneda}
-          gpuSeleccionada={gpuSeleccionada}
-          cpuSeleccionada={cpuSeleccionada}
-          monitorSeleccionado={monitorSeleccionado}
-          periSeleccionados={periSeleccionados}
-          aiPeriCustom={aiPeriCustom}
-          ramSeleccionada={ramSeleccionada}
-          ramCantidad={ramCantidad}
-          storageCantidades={storageCantidades}
-          txtNinguno={txtNinguno}
-          compartirImagen={compartirImagen}
-          descargarImagen={descargarImagen}
-          generarCanvas={generarCanvas}
-        />
+        <Footer t={t} />
       </div>
-
-      <StickyTotal 
-        lang={lang} 
-        costeMensual={costeMensual}
-        costeDiario={costeDiario}
-        moneda={moneda}
-        consumoTotal={consumoTotal}
-        visible={showSticky}
-        gpuSeleccionada={gpuSeleccionada}
-        cpuSeleccionada={cpuSeleccionada}
-        monitorSeleccionado={monitorSeleccionado}
-        textoPerifericos={textoPeriCompacto}
-        ramSeleccionada={ramSeleccionada}
-        textoStorage={textoStorageCompacto}
-        txtNinguno={txtNinguno}
-      />
-
-      <Footer t={t} />
-    </div>
+    </>
   )
 }
 
